@@ -9,6 +9,7 @@ mod either;  //   同じディレクトリの他ソースコードでそのモ�
 #[cfg(test)]
 mod tests {
     use show::Show;
+    use functor::*;
     use monad::*;
     use either::*;
 
@@ -66,5 +67,40 @@ mod tests {
         let a = Either::Left("I'm Left!".to_string());
         let b = try_div_by_3_twice(a);
         assert_eq!("Left(I'm Left!)", b.show());
+    }
+
+    #[test]
+    fn test_decorate(){
+        fn div_by_3(i: i32) -> Either<String, i32> {
+            println!("div {}", i);
+            if i%3 == 0 {
+                Either::Right(i/3)
+            } else {
+                Either::Left(format!("`div_by_3` failed when {}", i))
+            }
+        }
+
+        fn try_div_by_3_twice(e: Either<String, i32>) -> Either<String, String> {
+            e.bind(|i1|
+                div_by_3(i1).bind(|i2|
+                    div_by_3(i2).bind(|i3|
+                        return_(format!("{} -> {} -> {}", i1, i2, i3))
+            )))
+        }
+
+        let a = Either::Right(9);
+        let b = try_div_by_3_twice(a);
+        let c = decorate(b);
+        assert_eq!("Right(***9 -> 3 -> 1***)", c.show());
+
+        let a = Either::Right(2);
+        let b = try_div_by_3_twice(a);
+        let c = decorate(b);
+        assert_eq!("Left(`div_by_3` failed when 2)", c.show());
+
+        let a = Either::Left("I'm Left!".to_string());
+        let b = try_div_by_3_twice(a);
+        let c = decorate(b);
+        assert_eq!("Left(I'm Left!)", c.show());
     }
 }
